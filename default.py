@@ -110,7 +110,7 @@ def sortUsers2(url):
 
 def listVideos(url):
         content = getUrl(url)
-        spl=content.split('<div class="dmpi_video_item')
+        spl=content.split('<div class="sd_video_wv3item')
         for i in range(1,len(spl),1):
             entry=spl[i]
             match=re.compile('title="(.+?)"', re.DOTALL).findall(entry)
