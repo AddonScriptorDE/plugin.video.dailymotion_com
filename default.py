@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import urllib,urllib2,re,xbmcplugin,xbmcgui,sys,xbmcaddon,base64,socket,datetime
+import urllib,urllib2,re,xbmcplugin,xbmcgui,sys,xbmcaddon,base64,socket,datetime,os
 
 socket.setdefaulttimeout(30)
 pluginhandle = int(sys.argv[1])
@@ -8,6 +8,7 @@ xbox = xbmc.getCondVisibility("System.Platform.xbox")
 addonID = 'plugin.video.dailymotion_com'
 addon = xbmcaddon.Addon(addonID)
 translation = addon.getLocalizedString
+channelFavsFile=xbmc.translatePath("special://profile/addon_data/"+addonID+"/"+addonID+".favorites")
 
 familyFilter=addon.getSetting("familyFilter")
 filters=["on","off"]
@@ -30,7 +31,6 @@ if language=="en_EN": lang=""
 
 def index():
         addDir(translation(30004),"",'listMovieCats',"")
-        #addDir(translation(30005),"http://www.dailymotion.com/visited-today/creative-official+internal/lang/"+lang+"/created-after/"+str(datetime.date.today() - datetime.timedelta(days=7))+"_00:00:00/1",'listVideos',"")
         addDir(translation(30006),"",'listChannels',"")
         addDir(translation(30007),"http://www.dailymotion.com/users/1",'sortUsers1',"")
         addDir(translation(30002),"",'search',"")
@@ -39,6 +39,20 @@ def index():
         xbmcplugin.endOfDirectory(pluginhandle)
         if forceViewMode==True:
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
+
+def favoriteUsers():
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
+        if os.path.exists(channelFavsFile):
+          fh = open(channelFavsFile, 'r')
+          all_lines = fh.readlines()
+          for line in all_lines:
+            user=line[line.find("###USER###=")+11:]
+            user=user[:user.find("#")]
+            thumb=line[line.find("###THUMB###=")+12:]
+            thumb=thumb[:thumb.find("#")]
+            addUserFavDir(user,"http://www.dailymotion.com/user/"+user+"/1",'sortChannels1',thumb,user)
+          fh.close()
+        xbmcplugin.endOfDirectory(pluginhandle)
 
 def listChannels():
         content = getUrl("http://www.dailymotion.com/channels/1")
@@ -91,6 +105,7 @@ def sortChannels2(url):
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortUsers1(url):
+        addDir(translation(30024),"","favoriteUsers","")
         addDir(translation(30015),url,'sortUsers2',"")
         addDir(translation(30016),url.replace("/users/","/users/featured/"),'sortUsers2',"")
         addDir(translation(30017),url.replace("/users/","/users/official/"),'sortUsers2',"")
@@ -110,7 +125,7 @@ def sortUsers2(url):
 
 def listVideos(url):
         content = getUrl(url)
-        spl=content.split('<div class="dmpi_video_item')
+        spl=content.split('<div class="sd_video_wv3item')
         for i in range(1,len(spl),1):
             entry=spl[i]
             match=re.compile('title="(.+?)"', re.DOTALL).findall(entry)
@@ -161,12 +176,13 @@ def listUsers(url):
             match=re.compile('<a class="name" href="/(.+?)">(.+?)</a>', re.DOTALL).findall(entry)
             title=match[0][0]
             match=re.compile('<a href="/user/(.+?)">(.+?)</a>', re.DOTALL).findall(entry)
+            oTitle=title
             if len(match)>0:
               vids=match[0][1]
               title=title+" ("+vids+")"
             match=re.compile('src="(.+?)"', re.DOTALL).findall(entry)
             thumb=match[0]
-            addDir(title,"http://www.dailymotion.com/user/"+title+"/1",'sortChannels1',thumb)
+            addUserDir(title,"http://www.dailymotion.com/user/"+title+"/1",'sortChannels1',thumb,oTitle)
         if content.find('<div class="next">')>=0:
           content=content[content.find('<div class="next">'):]
           content=content[:content.find('</div>')]
@@ -196,7 +212,7 @@ def playVideo(id):
           matchLive=re.compile('"customURL":"(.+?)"', re.DOTALL).findall(content)
           if len(matchFullHD)>0 and maxVideoQuality=="1080p":
             url=urllib.unquote_plus(matchFullHD[0]).replace("\\","")
-          elif len(matchHD)>0 and maxVideoQuality=="720p":
+          elif len(matchHD)>0 and (maxVideoQuality=="720p" or maxVideoQuality=="1080p"):
             url=urllib.unquote_plus(matchHD[0]).replace("\\","")
           elif len(matchHQ)>0:
             url=urllib.unquote_plus(matchHQ[0]).replace("\\","")
@@ -303,7 +319,27 @@ def addDir(name,url,mode,iconimage):
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
-         
+
+def addUserDir(name,url,mode,iconimage,oTitle):
+        u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
+        ok=True
+        liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+        liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        playListInfos="###MODE###=ADD###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunScript(special://home/addons/'+addonID+'/favs.py,'+urllib.quote_plus(playListInfos)+')',)])
+        ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
+        return ok
+
+def addUserFavDir(name,url,mode,iconimage,oTitle):
+        u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
+        ok=True
+        liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+        liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        playListInfos="###MODE###=REMOVE###REFRESH###=TRUE###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
+        liz.addContextMenuItems([(translation(30029), 'XBMC.RunScript(special://home/addons/'+addonID+'/favs.py,'+urllib.quote_plus(playListInfos)+')',)])
+        ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
+        return ok
+
 params=parameters_string_to_dict(sys.argv[2])
 mode=params.get('mode')
 url=params.get('url')
@@ -316,6 +352,8 @@ elif mode == 'listUsers':
     listUsers(url)
 elif mode == 'listChannels':
     listChannels()
+elif mode == 'favoriteUsers':
+    favoriteUsers()
 elif mode == 'listMovieCats':
     listMovieCats()
 elif mode == 'sortChannels1':
