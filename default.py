@@ -53,6 +53,8 @@ def favoriteUsers():
             addUserFavDir(user,"http://www.dailymotion.com/user/"+user+"/1",'sortChannels1',thumb,user)
           fh.close()
         xbmcplugin.endOfDirectory(pluginhandle)
+        if forceViewMode==True:
+          xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listChannels():
         content = getUrl("http://www.dailymotion.com/channels/1")
