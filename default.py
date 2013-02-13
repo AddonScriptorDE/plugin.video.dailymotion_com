@@ -9,7 +9,6 @@ addonID = 'plugin.video.dailymotion_com'
 addon = xbmcaddon.Addon(addonID)
 translation = addon.getLocalizedString
 channelFavsFile=xbmc.translatePath("special://profile/addon_data/"+addonID+"/"+addonID+".favorites")
-
 familyFilter=addon.getSetting("familyFilter")
 filters=["on","off"]
 familyFilter=filters[int(familyFilter)]
@@ -30,17 +29,18 @@ lang=language[language.find("_")+1:].lower()
 if language=="en_EN": lang=""
 
 def index():
-        addDir(translation(30004),"",'listMovieCats',"")
+        addDir(translation(30024),"","favouriteUsers","")
         addDir(translation(30006),"",'listChannels',"")
         addDir(translation(30007),"http://www.dailymotion.com/users/1",'sortUsers1',"")
+        addDir(translation(30004),"",'listMovieCats',"")
         addDir(translation(30002),"",'search',"")
-        addDir(translation(30003),"http://www.dailymotion.com/visited-today/live/1",'listVideos',"")
+        addDir(translation(30003),"http://www.dailymotion.com/visited-hour/live/1",'listVideos',"")
         addDir("3D","http://www.dailymotion.com/3d/1",'sortChannels1',"")
         xbmcplugin.endOfDirectory(pluginhandle)
         if forceViewMode==True:
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
-def favoriteUsers():
+def favouriteUsers():
         xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         if os.path.exists(channelFavsFile):
           fh = open(channelFavsFile, 'r')
@@ -72,7 +72,6 @@ def listChannels():
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listMovieCats():
-        addDir("cracklemovies","http://www.dailymotion.com/user/cracklemovies/1",'listVideos',"")
         addDir("crazedigitalmovies","http://www.dailymotion.com/user/crazedigitalmovies/1",'listVideos',"")
         addDir("BFIfilms","http://www.dailymotion.com/user/BFIfilms/1",'listVideos',"")
         addDir("Documentaries","http://www.dailymotion.com/visited/group/DM_Documentaries/1",'listVideos',"")
@@ -107,7 +106,6 @@ def sortChannels2(url):
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortUsers1(url):
-        addDir(translation(30024),"","favoriteUsers","")
         addDir(translation(30015),url,'sortUsers2',"")
         addDir(translation(30016),url.replace("/users/","/users/featured/"),'sortUsers2',"")
         addDir(translation(30017),url.replace("/users/","/users/official/"),'sortUsers2',"")
@@ -145,21 +143,27 @@ def listVideos(url):
             duration=""
             if len(match)>0:
               duration=match[0]
+              if len(duration)==5:
+                if "00:" in duration:
+                  duration="1"
+              elif len(duration)==8:
+                hours=duration[:duration.find(":")]
+                mins=duration[duration.find(":")+1:]
+                mins=mins[:mins.find(":")]
+                duration=str(int(hours)*60+int(mins))
             match=re.compile('<div class="dmpi_video_description foreground">(.+?)</div>', re.DOTALL).findall(entry)
             desc=""
             if entry.find('<div class="dmpi_video_description foreground"></div>')==-1:
               desc=match[0]
             match=re.compile('data-src="(.+?)"', re.DOTALL).findall(entry)
             thumb=match[0]
-            desc=str(translation(30023))+": "+date+"\n"+desc
-            if user=="cracklemovies":
-              addLink(title,id,'playCrackle',thumb,desc,duration)
-            elif user=="hulu":
-              addLink(title,id,'playHulu',thumb,desc,duration)
+            desc=str(translation(30023))+": "+date+"\nUser: "+user+"\n"+desc
+            if user=="hulu":
+              addLink(title,id,'playHulu',thumb,user,desc,duration)
             elif user=="ARTEplus7":
-              addLink(title,id,'playArte',thumb,desc,duration)
+              addLink(title,id,'playArte',thumb,user,desc,duration)
             else:
-              addLink(title,id,'playVideo',thumb,desc,duration)
+              addLink(title,id,'playVideo',thumb,user,desc,duration)
         if content.find('<div class="next">')>=0:
           content=content[content.find('<div class="next">'):]
           content=content[:content.find('</div>')]
@@ -207,12 +211,24 @@ def playVideo(id):
         if content.find('"statusCode":410')>0 or content.find('"statusCode":403')>0:
           xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30022))+' (DailyMotion)!,5000)')
         else:
+          matchAuto=re.compile('"autoURL":"(.+?)"', re.DOTALL).findall(content)
+          matchLive=re.compile('"customURL":"(.+?)"', re.DOTALL).findall(content)
           matchFullHD=re.compile('"hd1080URL":"(.+?)"', re.DOTALL).findall(content)
           matchHD=re.compile('"hd720URL":"(.+?)"', re.DOTALL).findall(content)
           matchHQ=re.compile('"hqURL":"(.+?)"', re.DOTALL).findall(content)
           matchSD=re.compile('"sdURL":"(.+?)"', re.DOTALL).findall(content)
-          matchLive=re.compile('"customURL":"(.+?)"', re.DOTALL).findall(content)
-          if len(matchFullHD)>0 and maxVideoQuality=="1080p":
+          matchSD2=re.compile('"video_url":"(.+?)"', re.DOTALL).findall(content)
+          url=""
+          if len(matchAuto)>0:
+            content=getUrl(urllib.unquote_plus(matchAuto[0]).replace("\\",""))
+            match=re.compile('"height":(.+?),"template":"(.+?)"', re.DOTALL).findall(content)
+            for height, urlTemp in match:
+              if int(height) <= int(maxVideoQuality[:maxVideoQuality.find("p")]):
+                url=urllib.unquote_plus(urlTemp).replace(".mnft",".mp4")
+          elif len(matchLive)>0:
+            url=urllib.unquote_plus(matchLive[0]).replace("\\","")
+            url=getUrl(url)
+          elif len(matchFullHD)>0 and maxVideoQuality=="1080p":
             url=urllib.unquote_plus(matchFullHD[0]).replace("\\","")
           elif len(matchHD)>0 and (maxVideoQuality=="720p" or maxVideoQuality=="1080p"):
             url=urllib.unquote_plus(matchHD[0]).replace("\\","")
@@ -220,24 +236,11 @@ def playVideo(id):
             url=urllib.unquote_plus(matchHQ[0]).replace("\\","")
           elif len(matchSD)>0:
             url=urllib.unquote_plus(matchSD[0]).replace("\\","")
-          elif len(matchLive)>0:
-            url=urllib.unquote_plus(matchLive[0]).replace("\\","")
-            url=getUrl(url)
-          listitem = xbmcgui.ListItem(path=url)
-          return xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
-
-def playCrackle(id):
-        try:
-          content = getUrl("http://www.dailymotion.com/video/"+id)
-          match=re.compile('swf\\?id=(.+?)&', re.DOTALL).findall(content)
-          id=match[0]
-          content = getUrl("http://api.crackle.com/Service.svc/details/media/"+id+"/US?format=json")
-          match=re.compile('"Thumbnail_Wide":"http:\\\/\\\/images-us-am.crackle.com\\\/(.+?)_tnw.jpg', re.DOTALL).findall(content)
-          url="http://media-us-am.crackle.com/"+match[0].replace("\\","")+"_480p_1mbps.mp4"
-          listitem = xbmcgui.ListItem(path=url)
-          return xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
-        except:
-          xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30022))+' (Crackle)!,5000)')
+          elif len(matchSD2)>0:
+            url=urllib.unquote_plus(matchSD2[0]).replace("\\","")
+          if url!="":
+            listitem = xbmcgui.ListItem(path=url)
+            return xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
 
 def playHulu(id):
         try:
@@ -279,6 +282,36 @@ def playArte(id):
         except:
           xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30022))+' (Arte)!,5000)')
 
+def favourites(param):
+        mode=param[param.find("###MODE###=")+11:]
+        mode=mode[:mode.find("###")]
+        channelEntry=param[param.find("###USER###="):]
+        if mode=="ADD":
+          if os.path.exists(channelFavsFile):
+            fh = open(channelFavsFile, 'r')
+            content=fh.read()
+            fh.close()
+            if content.find(channelEntry)==-1:
+              fh=open(channelFavsFile, 'a')
+              fh.write(channelEntry+"\n")
+              fh.close()
+          else:
+            fh=open(channelFavsFile, 'a')
+            fh.write(channelEntry+"\n")
+            fh.close()
+        elif mode=="REMOVE":
+          refresh=param[param.find("###REFRESH###=")+14:]
+          refresh=refresh[:refresh.find("###USER###=")]
+          fh = open(channelFavsFile, 'r')
+          content=fh.read()
+          fh.close()
+          entry=content[content.find(channelEntry):]
+          fh=open(channelFavsFile, 'w')
+          fh.write(content.replace(channelEntry+"\n",""))
+          fh.close()
+          if refresh=="TRUE":
+            xbmc.executebuiltin("Container.Refresh")
+
 def cleanTitle(title):
         title=title.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("&#039;","'").replace("&quot;","\"").replace("&szlig;","ß").replace("&ndash;","-")
         title=title.replace("&Auml;","Ä").replace("&Uuml;","Ü").replace("&Ouml;","Ö").replace("&auml;","ä").replace("&uuml;","ü").replace("&ouml;","ö")
@@ -287,7 +320,7 @@ def cleanTitle(title):
 
 def getUrl(url):
         req = urllib2.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/14.0')
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:18.0) Gecko/20100101 Firefox/18.0')
         req.add_header('Cookie',"lang="+language+"; family_filter="+familyFilter)
         response = urllib2.urlopen(req)
         link=response.read()
@@ -305,12 +338,14 @@ def parameters_string_to_dict(parameters):
                     paramDict[paramSplits[0]] = paramSplits[1]
         return paramDict
 
-def addLink(name,url,mode,iconimage,desc,duration):
+def addLink(name,url,mode,iconimage,user,desc,duration):
         u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
         ok=True
         liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name, "Plot": desc, "Duration": duration } )
         liz.setProperty('IsPlayable', 'true')
+        playListInfos="###MODE###=ADD###USER###="+user+"###THUMB###=DefaultVideo.png###END###"
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz)
         return ok
 
@@ -328,7 +363,7 @@ def addUserDir(name,url,mode,iconimage,oTitle):
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
         playListInfos="###MODE###=ADD###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
-        liz.addContextMenuItems([(translation(30028), 'XBMC.RunScript(special://home/addons/'+addonID+'/favs.py,'+urllib.quote_plus(playListInfos)+')',)])
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -338,7 +373,7 @@ def addUserFavDir(name,url,mode,iconimage,oTitle):
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
         playListInfos="###MODE###=REMOVE###REFRESH###=TRUE###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
-        liz.addContextMenuItems([(translation(30029), 'XBMC.RunScript(special://home/addons/'+addonID+'/favs.py,'+urllib.quote_plus(playListInfos)+')',)])
+        liz.addContextMenuItems([(translation(30029), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -354,8 +389,10 @@ elif mode == 'listUsers':
     listUsers(url)
 elif mode == 'listChannels':
     listChannels()
-elif mode == 'favoriteUsers':
-    favoriteUsers()
+elif mode == 'favourites':
+    favourites(url)
+elif mode == 'favouriteUsers':
+    favouriteUsers()
 elif mode == 'listMovieCats':
     listMovieCats()
 elif mode == 'sortChannels1':
@@ -368,8 +405,6 @@ elif mode == 'sortUsers2':
     sortUsers2(url)
 elif mode == 'playVideo':
     playVideo(url)
-elif mode == 'playCrackle':
-    playCrackle(url)
 elif mode == 'playHulu':
     playHulu(url)
 elif mode == 'playArte':

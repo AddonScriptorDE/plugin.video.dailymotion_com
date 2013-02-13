@@ -1,6 +1,9 @@
 1.0.0
 - First Try
 1.0.1
-- Added user favorites
+- Added user favourites
 - Fixed site changes
 - Fixed max video resolution bug
+1.0.2
+- Fixed site changes / video playback
+- Added contextmenu for adding user while browsing videos
