@@ -7,3 +7,8 @@
 1.0.2
 - Fixed site changes / video playback
 - Added contextmenu for adding user while browsing videos
+1.0.3
+- Added context menu for adding user of the selected video
+- Added context menu for adding user manually
+- Added category "Popular"
+- Some ohter changes

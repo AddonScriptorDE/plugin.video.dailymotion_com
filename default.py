@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import urllib,urllib2,re,xbmcplugin,xbmcgui,sys,xbmcaddon,base64,socket,datetime,os
+import urllib,urllib2,re,xbmcplugin,xbmcgui,sys,xbmcaddon,base64,socket,os
+from datetime import datetime
+from datetime import timedelta
 
 socket.setdefaulttimeout(30)
 pluginhandle = int(sys.argv[1])
@@ -12,16 +14,11 @@ channelFavsFile=xbmc.translatePath("special://profile/addon_data/"+addonID+"/"+a
 familyFilter=addon.getSetting("familyFilter")
 filters=["on","off"]
 familyFilter=filters[int(familyFilter)]
-
 forceViewMode=addon.getSetting("forceViewMode")
-if forceViewMode=="true": forceViewMode=True
-else: forceViewMode=False
 viewMode=str(addon.getSetting("viewMode"))
-
 maxVideoQuality=addon.getSetting("maxVideoQuality")
 qual=["480p","720p","1080p"]
 maxVideoQuality=qual[int(maxVideoQuality)]
-
 language=addon.getSetting("language")
 languages=["en_EN","ar_ES","au_EN","be_FR","be_NL","br_PT","ca_EN","ca_FR","de_DE","es_ES","es_CA","gr_EL","fr_FR","in_EN","ie_EN","it_IT","mx_ES","ma_FR","nl_NL","at_DE","pl_PL","pt_PT","ru_RU","ro_RO","ch_FR","ch_DE","ch_IT","tn_FR","tr_TR","en_GB","en_US","vn_VI","jp_JP","cn_ZH"]
 language=languages[int(language)]
@@ -29,7 +26,9 @@ lang=language[language.find("_")+1:].lower()
 if language=="en_EN": lang=""
 
 def index():
-        addDir(translation(30024),"","favouriteUsers","")
+        addFavDir(translation(30024),"","favouriteUsers","")
+        if lang!="":
+          addDir(translation(30005),"http://www.dailymotion.com/"+lang+"/visited-today/creative-official+internal/created-after/"+str((datetime.today()-timedelta(weeks=1)).strftime("%Y-%m-%d"))+"_00:00:00/1",'listVideos',"")
         addDir(translation(30006),"",'listChannels',"")
         addDir(translation(30007),"http://www.dailymotion.com/users/1",'sortUsers1',"")
         addDir(translation(30004),"",'listMovieCats',"")
@@ -37,7 +36,7 @@ def index():
         addDir(translation(30003),"http://www.dailymotion.com/visited-hour/live/1",'listVideos',"")
         addDir("3D","http://www.dailymotion.com/3d/1",'sortChannels1',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def favouriteUsers():
@@ -53,7 +52,7 @@ def favouriteUsers():
             addUserFavDir(user,"http://www.dailymotion.com/user/"+user+"/1",'sortChannels1',thumb,user)
           fh.close()
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listChannels():
@@ -68,7 +67,7 @@ def listChannels():
               id=id[:id.find("/")]
             addDir(title,"http://www.dailymotion.com/"+lang+"/channel/"+id+"/1",'sortChannels1',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listMovieCats():
@@ -78,7 +77,7 @@ def listMovieCats():
         addDir("Independent","http://www.dailymotion.com/visited/group/DM_Independent_film/1",'listVideos',"")
         addDir("Vintage","http://www.dailymotion.com/visited/group/DM_Vintage/1",'listVideos',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortChannels1(url):
@@ -93,16 +92,16 @@ def sortChannels1(url):
           addDir(translation(30009),url.replace("/1","/visited/1"),'sortChannels2',"")
           addDir(translation(30010),url.replace("/1","/rated/1"),'sortChannels2',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortChannels2(url):
-        addDir(translation(30011),url.replace("/visited/","/visited-today/").replace("/rated/","/rated-today/"),'listVideos',"")
-        addDir(translation(30012),url.replace("/visited/","/visited-week/").replace("/rated/","/rated-week/"),'listVideos',"")
-        addDir(translation(30013),url.replace("/visited/","/visited-month/").replace("/rated/","/rated-month/"),'listVideos',"")
+        addDir(translation(30011),url.replace("/visited/","/visited-today/created-after/"+str((datetime.today()-timedelta(weeks=1)).strftime("%Y-%m-%d"))+"_00:00:00/").replace("/rated/","/rated-today/created-after/"+str((datetime.today()-timedelta(weeks=1)).strftime("%Y-%m-%d"))+"_00:00:00/"),'listVideos',"")
+        addDir(translation(30012),url.replace("/visited/","/visited-week/created-after/"+str((datetime.today()-timedelta(weeks=2)).strftime("%Y-%m-%d"))+"_00:00:00/").replace("/rated/","/rated-week/created-after/"+str((datetime.today()-timedelta(weeks=2)).strftime("%Y-%m-%d"))+"_00:00:00/"),'listVideos',"")
+        addDir(translation(30013),url.replace("/visited/","/visited-month/created-after/"+str((datetime.today()-timedelta(weeks=8)).strftime("%Y-%m-%d"))+"_00:00:00/").replace("/rated/","/rated-month/created-after/"+str((datetime.today()-timedelta(weeks=8)).strftime("%Y-%m-%d"))+"_00:00:00/"),'listVideos',"")
         addDir(translation(30014),url,'listVideos',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortUsers1(url):
@@ -111,7 +110,7 @@ def sortUsers1(url):
         addDir(translation(30017),url.replace("/users/","/users/official/"),'sortUsers2',"")
         addDir(translation(30018),url.replace("/users/","/users/creative/"),'sortUsers2',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def sortUsers2(url):
@@ -120,7 +119,7 @@ def sortUsers2(url):
         addDir(translation(30020),url.replace("/users/","/users/commented/"),'listUsers',"")
         addDir(translation(30021),url.replace("/users/","/users/rated/"),'listUsers',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listVideos(url):
@@ -133,7 +132,7 @@ def listVideos(url):
             title=cleanTitle(title)
             match=re.compile('data-id="(.+?)"', re.DOTALL).findall(entry)
             id=match[0]
-            match=re.compile('<span class="name">(.+?)</span>', re.DOTALL).findall(entry)
+            match=re.compile('<a class="foreground2" href="/(.+?)"', re.DOTALL).findall(entry)
             user=match[0]
             match=re.compile('<div class="dmco_date">(.+?)</div>', re.DOTALL).findall(entry)
             date=""
@@ -171,7 +170,7 @@ def listVideos(url):
           if len(match)>0:
             addDir(translation(30001),"http://www.dailymotion.com"+match[0],'listVideos',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def listUsers(url):
@@ -196,7 +195,7 @@ def listUsers(url):
           if len(match)>0:
             addDir(translation(30001),"http://www.dailymotion.com"+match[0],'listUsers',"")
         xbmcplugin.endOfDirectory(pluginhandle)
-        if forceViewMode==True:
+        if forceViewMode=="true":
           xbmc.executebuiltin('Container.SetViewMode('+viewMode+')')
 
 def search():
@@ -282,6 +281,25 @@ def playArte(id):
         except:
           xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30022))+' (Arte)!,5000)')
 
+def addFav():
+        keyboard = xbmc.Keyboard('', translation(30028))
+        keyboard.doModal()
+        if keyboard.isConfirmed() and keyboard.getText():
+          channelEntry = "###USER###="+keyboard.getText()+"###THUMB###=###END###"
+          if os.path.exists(channelFavsFile):
+            fh = open(channelFavsFile, 'r')
+            content=fh.read()
+            fh.close()
+            if content.find(channelEntry)==-1:
+              fh=open(channelFavsFile, 'a')
+              fh.write(channelEntry+"\n")
+              fh.close()
+          else:
+            fh=open(channelFavsFile, 'a')
+            fh.write(channelEntry+"\n")
+            fh.close()
+          xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30030))+'!,5000)')
+
 def favourites(param):
         mode=param[param.find("###MODE###=")+11:]
         mode=mode[:mode.find("###")]
@@ -299,6 +317,7 @@ def favourites(param):
             fh=open(channelFavsFile, 'a')
             fh.write(channelEntry+"\n")
             fh.close()
+          xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30030))+'!,5000)')
         elif mode=="REMOVE":
           refresh=param[param.find("###REFRESH###=")+14:]
           refresh=refresh[:refresh.find("###USER###=")]
@@ -367,6 +386,15 @@ def addUserDir(name,url,mode,iconimage,oTitle):
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
+def addFavDir(name,url,mode,iconimage):
+        u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
+        ok=True
+        liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+        liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=addFav)',)])
+        ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
+        return ok
+
 def addUserFavDir(name,url,mode,iconimage,oTitle):
         u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
         ok=True
@@ -391,6 +419,8 @@ elif mode == 'listChannels':
     listChannels()
 elif mode == 'favourites':
     favourites(url)
+elif mode == 'addFav':
+    addFav()
 elif mode == 'favouriteUsers':
     favouriteUsers()
 elif mode == 'listMovieCats':
