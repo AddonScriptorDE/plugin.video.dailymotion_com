@@ -11,9 +11,21 @@ addonID = 'plugin.video.dailymotion_com'
 addon = xbmcaddon.Addon(addonID)
 translation = addon.getLocalizedString
 channelFavsFile=xbmc.translatePath("special://profile/addon_data/"+addonID+"/"+addonID+".favorites")
-familyFilter=addon.getSetting("familyFilter")
-filters=["on","off"]
-familyFilter=filters[int(familyFilter)]
+familyFilterFile=xbmc.translatePath("special://profile/addon_data/"+addonID+"/familyFilter")
+
+while (not os.path.exists(xbmc.translatePath("special://profile/addon_data/"+addonID+"/settings.xml"))):
+  addon.openSettings()
+
+if os.path.exists(familyFilterFile):
+  fh = open(familyFilterFile, 'r')
+  familyFilter = fh.read()
+  fh.close()
+else:
+  familyFilter="on"
+  fh = open(familyFilterFile, 'w')
+  fh.write("on")
+  fh.close()
+
 forceViewMode=addon.getSetting("forceViewMode")
 viewMode=str(addon.getSetting("viewMode"))
 maxVideoQuality=addon.getSetting("maxVideoQuality")
@@ -158,7 +170,7 @@ def listVideos(url):
             thumb=match[0]
             desc=str(translation(30023))+": "+date+"\nUser: "+user+"\n"+desc
             if user=="hulu":
-              addLink(title,id,'playHulu',thumb,user,desc,duration)
+              pass
             elif user=="ARTEplus7":
               addLink(title,id,'playArte',thumb,user,desc,duration)
             else:
@@ -241,23 +253,6 @@ def playVideo(id):
             listitem = xbmcgui.ListItem(path=url)
             return xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
 
-def playHulu(id):
-        try:
-          content = getUrl("http://www.dailymotion.com/video/"+id)
-          match=re.compile('<link rel="video_src" href="http://player.hulu.com/express/(.+?)"', re.DOTALL).findall(content)
-          contentID=match[0]
-          #Where to get videoID/eID
-          videoID=""
-          eID=""
-          if xbox==True:
-            url = 'plugin://video/Hulu/?mode="TV_play"&url="'+contentID+'"&videoid="'+videoID+'"&eid="'+eID+'"'
-          else:
-            url = 'plugin://plugin.video.hulu/?mode="TV_play"&url="'+contentID+'"&videoid="'+videoID+'"&eid="'+eID+'"'
-          listitem = xbmcgui.ListItem(path=url)
-          return xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
-        except:
-          xbmc.executebuiltin('XBMC.Notification(Info:,'+str(translation(30022))+' (Hulu)!,5000)')
-
 def playArte(id):
         try:
           content = getUrl("http://www.dailymotion.com/video/"+id)
@@ -331,6 +326,29 @@ def favourites(param):
           if refresh=="TRUE":
             xbmc.executebuiltin("Container.Refresh")
 
+def toggleFamilyFilter():
+        fh = open(familyFilterFile, 'r')
+        familyFilter = fh.read()
+        fh.close()
+        if familyFilter=="on":
+          dialog = xbmcgui.Dialog()
+          ret = dialog.yesno(translation(30104), translation(30031))
+          if ret==1:
+            familyFilter="off"
+            fh = open(familyFilterFile, 'w')
+            fh.write(familyFilter)
+            fh.close()
+            xbmc.executebuiltin("Container.Refresh")
+        else:
+          dialog = xbmcgui.Dialog()
+          ret = dialog.yesno(translation(30104), translation(30032))
+          if ret==1:
+            familyFilter="on"
+            fh = open(familyFilterFile, 'w')
+            fh.write(familyFilter)
+            fh.close()
+            xbmc.executebuiltin("Container.Refresh")
+
 def cleanTitle(title):
         title=title.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("&#039;","'").replace("&quot;","\"").replace("&szlig;","ß").replace("&ndash;","-")
         title=title.replace("&Auml;","Ä").replace("&Uuml;","Ü").replace("&Ouml;","Ö").replace("&auml;","ä").replace("&uuml;","ü").replace("&ouml;","ö")
@@ -364,7 +382,7 @@ def addLink(name,url,mode,iconimage,user,desc,duration):
         liz.setInfo( type="Video", infoLabels={ "Title": name, "Plot": desc, "Duration": duration } )
         liz.setProperty('IsPlayable', 'true')
         playListInfos="###MODE###=ADD###USER###="+user+"###THUMB###=DefaultVideo.png###END###"
-        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',), (translation(30104), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=toggleFamilyFilter)',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz)
         return ok
 
@@ -373,6 +391,7 @@ def addDir(name,url,mode,iconimage):
         ok=True
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
+        liz.addContextMenuItems([(translation(30104), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=toggleFamilyFilter)',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -382,7 +401,7 @@ def addUserDir(name,url,mode,iconimage,oTitle):
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
         playListInfos="###MODE###=ADD###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
-        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
+        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',), (translation(30104), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=toggleFamilyFilter)',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -391,7 +410,7 @@ def addFavDir(name,url,mode,iconimage):
         ok=True
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
-        liz.addContextMenuItems([(translation(30028), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=addFav)',)])
+        liz.addContextMenuItems([(translation(30033), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=addFav)',), (translation(30104), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=toggleFamilyFilter)',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -401,7 +420,7 @@ def addUserFavDir(name,url,mode,iconimage,oTitle):
         liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
         liz.setInfo( type="Video", infoLabels={ "Title": name } )
         playListInfos="###MODE###=REMOVE###REFRESH###=TRUE###USER###="+oTitle+"###THUMB###="+iconimage+"###END###"
-        liz.addContextMenuItems([(translation(30029), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',)])
+        liz.addContextMenuItems([(translation(30029), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=favourites&url='+urllib.quote_plus(playListInfos)+')',), (translation(30104), 'XBMC.RunPlugin(plugin://plugin.video.dailymotion_com/?mode=toggleFamilyFilter)',)])
         ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
         return ok
 
@@ -435,11 +454,11 @@ elif mode == 'sortUsers2':
     sortUsers2(url)
 elif mode == 'playVideo':
     playVideo(url)
-elif mode == 'playHulu':
-    playHulu(url)
 elif mode == 'playArte':
     playArte(url)
 elif mode == 'search':
     search()
+elif mode == 'toggleFamilyFilter':
+    toggleFamilyFilter()
 else:
     index()

@@ -27,9 +27,12 @@
   <string id="30028">Add user to favs</string>
   <string id="30029">Remove from addon favs</string>
   <string id="30030">Added user to favs</string>
+  <string id="30031">Are you over 18 and would like to turn off the family filter?</string>
+  <string id="30032">Turn the family filter on?</string>
+  <string id="30033">Add user</string>
   <string id="30101">Country</string>
   <string id="30102">Force View</string>
   <string id="30103">ViewID</string>
-  <string id="30104">Family Filter</string>
+  <string id="30104">Toggle Family Filter</string>
   <string id="30105">Max video quality</string>
 </strings>

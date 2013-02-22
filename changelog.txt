@@ -12,3 +12,5 @@
 - Added context menu for adding user manually
 - Added category "Popular"
 - Some other changes
+1.0.4 / 2.0.4
+- Added message for toggling the family filter
