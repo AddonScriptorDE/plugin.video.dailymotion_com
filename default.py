@@ -61,7 +61,7 @@ def listUserPlaylists(url):
         content = getUrl(url)
         match=re.compile('{"id":"(.+?)","name":"(.+?)","videos_total":(.+?)}', re.DOTALL).findall(content)
         for id, title, vids in match:
-          addDir(title+" ("+vids+")", id+"_"+dmUser+"_"+title,'showPlaylist','')
+          addDir(title+" ("+vids+")", urllib.quote_plus(id+"_"+dmUser+"_"+title),'showPlaylist','')
         match=re.compile('"page":(.+?),', re.DOTALL).findall(content)
         currentPage=int(match[0])
         nextPage=currentPage+1
